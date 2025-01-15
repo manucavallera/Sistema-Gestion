@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoMovimiento {
+  CREDITO
+  DEBITO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+}
+
+model Cliente {
+  id            Int               @id @default(autoincrement())
+  razonSocial   String
+  direccion     String
+  cuit          String            @unique
+  zona          String
+  telefono      String?
+  email         String?
+  saldo         Float             @default(0)
+  ventas        Venta[]
+  movimientos   MovimientoCuenta[]
+  pagos         Pago[]
+  recibos       Recibo[]
+  remitos       Remito[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Proveedor {
+  id            Int               @id @default(autoincrement())
+  razonSocial   String
+  direccion     String
+  cuit          String            @unique
+  zona          String
+  telefono      String?
+  email         String?
+  saldo         Float             @default(0)
+  compras       Compra[]
+  movimientos   MovimientoCuenta[]
+  pagos         Pago[]
+  recibos       Recibo[]
+  remitos       Remito[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Compra {
+  id            Int       @id @default(autoincrement())
+  fecha         DateTime  @default(now())
+  total         Float
+  proveedor     Proveedor @relation(fields: [proveedorId], references: [id])
+  proveedorId   Int
+  archived      Boolean   @default(false)
+  deletedAt     DateTime? // Para implementar soft delete
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Venta {
+  id            Int       @id @default(autoincrement())
+  fecha         DateTime  @default(now())
+  total         Float
+  cliente       Cliente   @relation(fields: [clienteId], references: [id])
+  clienteId     Int
+  archived      Boolean   @default(false)
+  deletedAt     DateTime? // Para implementar soft delete
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model MovimientoCuenta {
+  id            Int           @id @default(autoincrement())
+  fecha         DateTime      @default(now())
+  tipo          TipoMovimiento
+  monto         Float
+  saldo         Float
+  cliente       Cliente?      @relation(fields: [clienteId], references: [id])
+  clienteId     Int?
+  proveedor     Proveedor?    @relation(fields: [proveedorId], references: [id])
+  proveedorId   Int?
+  referencia    String?
+  pagos         Pago[]
+  recibos       Recibo[]
+  remitos       Remito[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Pago {
+  id            Int           @id @default(autoincrement())
+  fecha         DateTime      @default(now())
+  monto         Float
+  tipoPago      String
+  estado        String
+  metodo        MetodoPago
+  cliente       Cliente?      @relation(fields: [clienteId], references: [id])
+  clienteId     Int?
+  proveedor     Proveedor?    @relation(fields: [proveedorId], references: [id])
+  proveedorId   Int?
+  movimiento    MovimientoCuenta @relation(fields: [movimientoId], references: [id])
+  movimientoId  Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Recibo {
+  id            Int            @id @default(autoincrement())
+  fecha         DateTime       @default(now())
+  total         Float
+  cliente       Cliente?       @relation(fields: [clienteId], references: [id])
+  clienteId     Int?
+  proveedor     Proveedor?     @relation(fields: [proveedorId], references: [id])
+  proveedorId   Int?
+  movimientos   MovimientoCuenta[]
+  ventaId       Int?           @relation(fields: [ventaId], references: [id])
+  venta         Venta?         @relation(fields: [ventaId], references: [id]) // Asegúrate de que "ventaId" y "id" sean del mismo tipo (Int)
+  compraId      Int?           @relation(fields: [compraId], references: [id])
+  compra        Compra?        @relation(fields: [compraId], references: [id]) // Asegúrate de que "compraId" y "id" sean del mismo tipo (Int)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Remito {
+  id            Int            @id @default(autoincrement())
+  fecha         DateTime       @default(now())
+  total         Float
+  cantidad      Int
+  cliente       Cliente?       @relation(fields: [clienteId], references: [id])
+  clienteId     Int?
+  proveedor     Proveedor?     @relation(fields: [proveedorId], references: [id])
+  proveedorId   Int?
+  movimientos   MovimientoCuenta[]
+  ventaId       Int?           @relation(fields: [ventaId], references: [id])
+  venta         Venta?         @relation(fields: [ventaId], references: [id]) // Asegúrate de que "ventaId" y "id" sean del mismo tipo (Int)
+  compraId      Int?           @relation(fields: [compraId], references: [id])
+  compra        Compra?        @relation(fields: [compraId], references: [id]) // Asegúrate de que "compraId" y "id" sean del mismo tipo (Int)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+
+model FormaDePago {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
+  descripcion String?
+  pagos       Pago[]  // Relación con pagos
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

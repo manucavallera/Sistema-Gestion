@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoMovimiento {
+  CREDITO
+  DEBITO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  CHEQUE
+}
+
+enum EstadoPago {
+  PENDIENTE
+  COMPLETADO
+  CANCELADO
+}
+
+enum TipoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  CHEQUE
+}
+
+model Cliente {
+  id          Int                @id @default(autoincrement())
+  razonSocial String             @db.VarChar(255)
+  direccion   String             @db.VarChar(255)
+  cuit        String             @unique @db.VarChar(20)
+  zona        String             @db.VarChar(100)
+  telefono    String?            @db.VarChar(15)
+  email       String?            @db.VarChar(255)
+  saldo       Decimal             @default(0)
+  ventas      Venta[]
+  movimientos MovimientoCuenta[]
+  pagos       Pago[]
+  recibos     Recibo[]           // Recibos emitidos por el cliente
+  remitos     Remito[]           // Recibos emitidos en ventas
+  cheques     Cheque[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime?          @updatedAt
+  deletedAt   DateTime?          // Para implementar soft delete
+}
+
+model Proveedor {
+  id          Int                @id @default(autoincrement())
+  razonSocial String             @db.VarChar(255)
+  direccion   String             @db.VarChar(255)
+  cuit        String             @unique @db.VarChar(20)
+  zona        String             @db.VarChar(100)
+  telefono    String?            @db.VarChar(15)
+  email       String?            @db.VarChar(255)
+  saldo       Decimal             @default(0)
+  compras     Compra[]
+  movimientos MovimientoCuenta[]
+  pagos       Pago[]              // Pagos realizados a este proveedor
+  recibos     Recibo[]           // Recibos emitidos por el proveedor
+  cheques     Cheque[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime?          @updatedAt
+  deletedAt   DateTime?          // Para implementar soft delete
+}
+
+model Compra {
+  id          Int       @id @default(autoincrement())
+  fecha       DateTime  @default(now())
+  total       Decimal    @default(0)
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id])
+  proveedorId Int
+  metodoPago  MetodoPago @default(EFECTIVO) // Método de pago utilizado con valor predeterminado
+  estado      EstadoPago @default(PENDIENTE) // Agrega este campo
+  archived    Boolean    @default(false)
+  deletedAt   DateTime?  // Para implementar soft delete
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime?  @updatedAt
+  recibos     Recibo[]   @relation("CompraRecibos") // Relación a Recibo
+}
+
+model Recibo {
+  id          Int       @id @default(autoincrement())
+  fecha       DateTime  @default(now())
+  monto       Decimal    @default(0)
+  cliente     Cliente?   @relation(fields: [clienteId], references: [id])
+  clienteId   Int?       // Opcional, si se relaciona con un cliente
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id]) // Relación a Proveedor
+  proveedorId Int?
+  compra      Compra?    @relation("CompraRecibos", fields: [compraId], references: [id]) // Relación a Compra
+  compraId    Int?       // ID de la compra asociada
+  venta       Venta?     @relation("VentaRecibos", fields: [ventaId], references: [id]) // Relación a Venta
+  ventaId     Int?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime?  @updatedAt
+  deletedAt   DateTime?  // Para implementar soft delete
+}
+
